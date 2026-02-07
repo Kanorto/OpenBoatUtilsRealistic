@@ -26,7 +26,7 @@ public enum Modes {
     BA_JANKLESS,//22
     BA_BLUE_JANKLESS,//23
     DEFAULT_BLUE_ICE,
-    REALISTIC
+    REALISTIC,
     ;
 
     public static void setMode(Modes mode) {
