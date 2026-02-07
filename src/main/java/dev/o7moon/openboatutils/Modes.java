@@ -184,6 +184,9 @@ public enum Modes {
                 return;
             case REALISTIC:
                 OpenBoatUtils.setAllBlocksSlipperiness(0.9f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
                 OpenBoatUtils.setBackwardsAcceleration(0.01f);
                 return;
         }
