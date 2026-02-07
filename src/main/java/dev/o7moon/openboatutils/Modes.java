@@ -25,7 +25,8 @@ public enum Modes {
     NOCOL_ALL_ENTITIES,//21
     BA_JANKLESS,//22
     BA_BLUE_JANKLESS,//23
-    DEFAULT_BLUE_ICE
+    DEFAULT_BLUE_ICE,
+    REALISTIC
     ;
 
     public static void setMode(Modes mode) {
@@ -180,6 +181,10 @@ public enum Modes {
                 return;
             case DEFAULT_BLUE_ICE:
                 OpenBoatUtils.setAllBlocksSlipperiness(0.989f);
+                return;
+            case REALISTIC:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.9f);
+                OpenBoatUtils.setBackwardsAcceleration(0.01f);
                 return;
         }
     }
