@@ -14,6 +14,7 @@ jobs:
     strategy:
       matrix:
         minecraft: ['1.20.4', '1.21', '1.21.3']
+      max-parallel: 1
     
     steps:
       - name: Checkout repository
@@ -38,6 +39,10 @@ jobs:
         id: find_jar
         run: |
           JAR_FILE=$(find versions/${{ matrix.minecraft }}/build/libs -name "*.jar" ! -name "*-sources.jar" -type f | head -n 1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: No JAR file found in versions/${{ matrix.minecraft }}/build/libs"
+            exit 1
+          fi
           echo "jar_path=$JAR_FILE" >> $GITHUB_OUTPUT
           echo "jar_name=$(basename $JAR_FILE)" >> $GITHUB_OUTPUT
       
