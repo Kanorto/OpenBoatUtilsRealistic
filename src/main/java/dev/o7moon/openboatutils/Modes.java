@@ -1,5 +1,7 @@
 package dev.o7moon.openboatutils;
 
+import dev.o7moon.openboatutils.physics.VehicleType;
+
 public enum Modes {
     BROKEN_SLIME_RALLY,//0
     BROKEN_SLIME_RALLY_BLUE,//1
@@ -25,8 +27,14 @@ public enum Modes {
     NOCOL_ALL_ENTITIES,//21
     BA_JANKLESS,//22
     BA_BLUE_JANKLESS,//23
-    DEFAULT_BLUE_ICE,
-    REALISTIC
+    DEFAULT_BLUE_ICE,//24
+    REALISTIC,//25
+    REALISTIC_WRC,//26
+    REALISTIC_GROUP_B,//27
+    REALISTIC_CLASSIC,//28
+    REALISTIC_LIGHTWEIGHT,//29
+    REALISTIC_TRUCK,//30
+    REALISTIC_ALLTERRAIN//31
     ;
 
     public static void setMode(Modes mode) {
@@ -183,11 +191,55 @@ public enum Modes {
                 OpenBoatUtils.setAllBlocksSlipperiness(0.989f);
                 return;
             case REALISTIC:
-                OpenBoatUtils.setAllBlocksSlipperiness(0.9f);
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
                 OpenBoatUtils.setFallDamage(false);
                 OpenBoatUtils.setAirControl(true);
                 OpenBoatUtils.setStepSize(1.25f);
                 OpenBoatUtils.setBackwardsAcceleration(0.01f);
+                OpenBoatUtils.setVehicleType(VehicleType.WRC_CAR);
+                return;
+            case REALISTIC_WRC:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
+                OpenBoatUtils.setVehicleType(VehicleType.WRC_CAR);
+                return;
+            case REALISTIC_GROUP_B:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
+                OpenBoatUtils.setVehicleType(VehicleType.GROUP_B);
+                return;
+            case REALISTIC_CLASSIC:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
+                OpenBoatUtils.setVehicleType(VehicleType.CLASSIC_RALLY);
+                return;
+            case REALISTIC_LIGHTWEIGHT:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
+                OpenBoatUtils.setVehicleType(VehicleType.LIGHTWEIGHT);
+                return;
+            case REALISTIC_TRUCK:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
+                OpenBoatUtils.setVehicleType(VehicleType.TRUCK);
+                return;
+            case REALISTIC_ALLTERRAIN:
+                OpenBoatUtils.setAllBlocksSlipperiness(0.98f);
+                OpenBoatUtils.setFallDamage(false);
+                OpenBoatUtils.setAirControl(true);
+                OpenBoatUtils.setStepSize(1.25f);
+                OpenBoatUtils.setCanStepWhileFalling(true);
+                OpenBoatUtils.setVehicleType(VehicleType.WRC_CAR);
                 return;
         }
     }
