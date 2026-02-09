@@ -1,0 +1,51 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build-mod:
+    name: Build OpenBoatUtilsRealistic Mod
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [21]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build mod
+        run: ./gradlew chiseledBuild
+
+      - name: Upload mod artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openboatutils-mod
+          path: |
+            versions/*/build/libs/*.jar
+            !versions/*/build/libs/*-sources.jar
+          if-no-files-found: warn
+
+      - name: Upload mod JARs to release
+        if: github.event_name == 'release'
+        run: |
+          for jar in versions/*/build/libs/*.jar; do
+            if [ -f "$jar" ] && [ "${jar}" = "${jar%-sources.jar}" ]; then
+              gh release upload "${{ github.event.release.tag_name }}" "$jar" --clobber
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
