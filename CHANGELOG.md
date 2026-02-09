@@ -122,7 +122,7 @@ All realistic modes set: `allBlocksSlipperiness(0.98)`, `fallDamage(false)`, `ai
 | 59 | `SET_WEATHER_CONDITION` | `short` | Weather condition (0-4) |
 
 #### Singleplayer Commands (`SingleplayerCommands.java`)
-New file (756 lines) adding chat commands for testing in singleplayer. All commands send packets through the same server→client pipeline, ensuring identical behavior to multiplayer. Commands include all original OBU settings plus:
+Extended from original 490 lines to 756 lines (+266 lines). All new commands send packets through the same server→client pipeline, ensuring identical behavior to multiplayer. New commands added:
 - `/realisticphysics <true/false>` — Enable/disable realistic physics
 - `/vehicletype <type>` — Set vehicle preset
 - `/vehiclemass <mass>` — Set vehicle mass
@@ -144,6 +144,8 @@ New file (756 lines) adding chat commands for testing in singleplayer. All comma
 - `/vehicleenginebraking <braking>` — Set engine braking
 - `/vehiclerollstiffness <ratio>` — Set roll stiffness
 
+Note: The following four-wheel model parameters have no singleplayer command and can only be set via server packets: AWD front split (53), front/rear differential (54, 55), LSD locking coefficient (56), downforce coefficient/bias (57, 58), weather condition (59).
+
 #### CI/CD Workflows (`.github/workflows/`)
 3 new workflow files:
 - **`ci.yml`** — Runs `chiseledBuild` on every push/PR to `main` branch. Validates that the mod compiles for all supported Minecraft versions.
@@ -161,13 +163,18 @@ New file (756 lines) adding chat commands for testing in singleplayer. All comma
 - **New imports**: physics package classes
 
 #### `BoatMixin.java`
-- **Merged with AbstractBoatMixin**: Now handles both `BoatEntity` (<=1.21) and `AbstractBoatEntity` (>=1.21.3) using Stonecutter conditional comments, eliminating the need for a separate `AbstractBoatMixin.java` in the 1.21.3 versions folder
+- **Merged with AbstractBoatMixin**: Now handles both `BoatEntity` (<=1.21) and `AbstractBoatEntity` (>=1.21.3) using Stonecutter conditional comments and the Stonecutter `/*$ boat >>*/` swap directive, eliminating the need for a separate `AbstractBoatMixin.java` in the 1.21.3 versions folder
+- **`@Mixin` target**: Now conditionally targets `BoatEntity` (<=1.21) or `AbstractBoatEntity` (>=1.21.3) using Stonecutter
+- **Shadow fields/methods**: All shadow declarations use Stonecutter conditions for the correct type per MC version
+- **All hook methods**: `oncePerTick()`, `paddleHook()`, `tickHook()`, `hookCheckLocation()`, and all `@Redirect`/`@ModifyConstant` methods have version-conditional signatures for both `BoatEntity` and `AbstractBoatEntity`
 - **`oncePerTick()`**: Added realistic physics engine integration:
   - When `fourWheelPhysics.isEnabled()` and boat is on ground (or in air with airControl), computes full physics update each tick
   - Reads player keyboard input (left/right for steering, forward for throttle, back for braking, jump for handbrake)
   - Applies computed velocity and yaw delta to the boat entity
   - Computes visual pitch (nose dips when braking, rises when accelerating) and roll contribution
   - Jump key is repurposed as handbrake when realistic physics is active
+  - Original jump behavior is suppressed when realistic physics is enabled
+- **`interpolationStepsHook()`**: Moved from the deleted `AbstractBoatMixin.java` into `BoatMixin.java` with `>=1.21.3` Stonecutter guard. Sets interpolation steps to 10 when `interpolationCompat` is enabled
 - **New import**: `RealisticPhysicsEngine`
 
 #### `ClientboundPackets.java`

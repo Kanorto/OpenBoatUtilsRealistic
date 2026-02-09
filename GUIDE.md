@@ -346,6 +346,9 @@ All commands are available in singleplayer for testing. They send packets throug
 /vehicledrivetrain <RWD/FWD/AWD> — Set drivetrain type
 ```
 
+> **Note**: The following parameters can only be set by a server plugin (no singleplayer command available):
+> AWD front/rear split, front/rear differential type, LSD locking coefficient, downforce coefficient, downforce front bias, weather condition.
+
 ### Surface Configuration
 ```
 /setsurfacetype <block> <surface> — Map a block to a surface type
