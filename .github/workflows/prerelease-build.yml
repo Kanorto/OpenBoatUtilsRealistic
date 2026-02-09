@@ -9,46 +9,43 @@ permissions:
 
 jobs:
   build:
+    name: Build OpenBoatUtilsRealistic Mod
     runs-on: ubuntu-latest
-    
     strategy:
       matrix:
-        minecraft: ['1.20.4', '1.21', '1.21.3']
-      max-parallel: 1
-    
+        java: [21]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Set up JDK 21
+
+      - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: 21
-      
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-      
-      - name: Build with Gradle for Minecraft ${{ matrix.minecraft }}
-        run: |
-          # Set the active version for stonecutter
-          sed -i 's/stonecutter.active ".*"/stonecutter.active "${{ matrix.minecraft }}"/' stonecutter.gradle
-          ./gradlew build --no-daemon
-      
-      - name: Find JAR file
-        id: find_jar
-        run: |
-          JAR_FILE=$(find versions/${{ matrix.minecraft }}/build/libs -name "*.jar" ! -name "*-sources.jar" -type f | head -n 1)
-          if [ -z "$JAR_FILE" ]; then
-            echo "Error: No JAR file found in versions/${{ matrix.minecraft }}/build/libs"
-            exit 1
-          fi
-          echo "jar_path=$JAR_FILE" >> $GITHUB_OUTPUT
-          echo "jar_name=$(basename $JAR_FILE)" >> $GITHUB_OUTPUT
-      
-      - name: Upload JAR to release
-        uses: softprops/action-gh-release@v1
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build mod
+        run: ./gradlew chiseledBuild
+
+      - name: Upload mod artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: ${{ steps.find_jar.outputs.jar_path }}
+          name: openboatutils-mod
+          path: |
+            versions/*/build/libs/*.jar
+            !versions/*/build/libs/*-sources.jar
+          if-no-files-found: warn
+
+      - name: Upload mod JARs to release
+        if: github.event_name == 'release'
+        run: |
+          for jar in versions/*/build/libs/*.jar; do
+            if [ -f "$jar" ] && [ "${jar}" = "${jar%-sources.jar}" ]; then
+              gh release upload "${{ github.event.release.tag_name }}" "$jar" --clobber
+            fi
+          done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
