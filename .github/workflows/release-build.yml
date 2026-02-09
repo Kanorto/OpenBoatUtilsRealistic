@@ -1,14 +1,14 @@
-name: Build and Upload Pre-release
+name: Build and Release
 
 on:
   release:
-    types: [prereleased]
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-mod:
     name: Build OpenBoatUtilsRealistic Mod
     runs-on: ubuntu-latest
     steps:
@@ -37,6 +37,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload mod JARs to release
+        if: github.event_name == 'release'
         run: |
           for jar in versions/*/build/libs/*.jar; do
             if [ -f "$jar" ] && [ "${jar}" = "${jar%-sources.jar}" ]; then
