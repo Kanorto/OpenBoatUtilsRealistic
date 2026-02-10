@@ -363,11 +363,16 @@ All original OpenBoatUtils singleplayer commands also work:
 /stepsize <size>                  — Set boat step height
 /defaultslipperiness <value>      — Set default block slipperiness
 /blockslipperiness <value> <blocks> — Set slipperiness for specific blocks
+/removeblockslipperiness <blocks> — Remove slipperiness override for specific blocks
+/clearslipperiness                — Clear all slipperiness overrides
 /aircontrol <true/false>          — Enable/disable air control
 /waterelevation <true/false>      — Enable/disable water elevation
 /falldamage <true/false>          — Enable/disable fall damage
 /jumpforce <force>                — Set jump force
-/boatmode <mode>                  — Set boat mode (e.g., RALLY, PARKOUR, REALISTIC)
+/boatmode <mode>                  — Set boat mode (see available modes below)
+/exclusiveboatmode <mode>         — Set boat mode exclusively (resets other settings first)
+/modeseries <modes>               — Apply multiple modes in sequence (space-separated)
+/exclusivemodeseries <modes>      — Reset then apply multiple modes in sequence
 /boatgravity <gravity>            — Set gravity force
 /setyawaccel <accel>              — Set yaw acceleration
 /setforwardaccel <accel>          — Set forward acceleration
@@ -376,14 +381,27 @@ All original OpenBoatUtils singleplayer commands also work:
 /allowaccelstacking <true/false>  — Allow acceleration stacking
 /underwatercontrol <true/false>   — Enable underwater control
 /surfacewatercontrol <true/false> — Enable surface water control
-/coyotetime <ticks>               — Set coyote time
+/coyotetime <ticks>               — Set coyote time (ticks of grace after leaving ground)
 /waterjumping <true/false>        — Enable water jumping
 /swimforce <force>                — Set swim force
 /collisionmode <0-5>              — Set collision mode
 /stepwhilefalling <true/false>    — Allow stepping while falling
-/setinterpolationten <true/false> — Set interpolation compatibility
-/setcollisionresolution <1-50>    — Set collision resolution
+/setinterpolationten <true/false> — Set interpolation compatibility (1.21.3+)
+/setcollisionresolution <1-50>    — Set collision resolution substeps
+/clearcollisionfilter             — Clear collision entity type filter
+/addcollisionfilter <entitytypes> — Add entity types to collision filter
+/setblocksetting <setting> <value> <blocks> — Set per-block physics settings
+/sendversionpacket                — Re-send version packet to the server
 ```
+
+#### Available Boat Modes
+The `/boatmode` command accepts any of the following mode names:
+
+**Standard modes**: `RALLY`, `RALLY_BLUE`, `BA_NOFD`, `PARKOUR`, `BA_BLUE_NOFD`, `PARKOUR_BLUE`, `BA`, `BA_BLUE`, `JUMP_BLOCKS`, `BOOSTER_BLOCKS`, `DEFAULT_ICE`, `DEFAULT_NINE_EIGHT_FIVE`, `DEFAULT_BLUE_ICE`, `NOCOL_BOATS_AND_PLAYERS`, `NOCOL_ALL_ENTITIES`, `BA_JANKLESS`, `BA_BLUE_JANKLESS`
+
+**Realistic physics modes**: `REALISTIC`, `REALISTIC_WRC`, `REALISTIC_GROUP_B`, `REALISTIC_CLASSIC`, `REALISTIC_LIGHTWEIGHT`, `REALISTIC_TRUCK`, `REALISTIC_ALLTERRAIN`
+
+> The realistic modes automatically enable the physics engine, set the corresponding vehicle type, and configure rally-style settings (low slipperiness, no fall damage, air control, 1.25 step height). The base `REALISTIC` mode additionally increases backward acceleration. `REALISTIC_ALLTERRAIN` also enables step-while-falling for terrain traversal.
 
 ---
 

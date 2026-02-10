@@ -112,7 +112,7 @@ A complete vehicle dynamics simulation with the following new source files:
 - `REALISTIC_TRUCK` (30) — Truck configuration
 - `REALISTIC_ALLTERRAIN` (31) — WRC car with step-while-falling enabled for terrain traversal
 
-All realistic modes set: `allBlocksSlipperiness(0.98)`, `fallDamage(false)`, `airControl(true)`, `stepSize(1.25)`, plus the corresponding vehicle type.
+All realistic modes set: `allBlocksSlipperiness(0.98)`, `fallDamage(false)`, `airControl(true)`, `stepSize(1.25)`, plus the corresponding vehicle type. Additionally, `REALISTIC` (25) increases backward acceleration (`backwardsAcceleration(0.01)`), and `REALISTIC_ALLTERRAIN` (31) enables `stepWhileFalling(true)`.
 
 #### New Network Packets (`ClientboundPackets.java`)
 27 new server-to-client packets (IDs 33–59):
