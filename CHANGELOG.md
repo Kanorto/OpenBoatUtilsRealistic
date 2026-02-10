@@ -76,12 +76,12 @@ A complete vehicle dynamics simulation with the following new source files:
   Supports differential types (OPEN/LOCKED/LSD), AWD torque split, aerodynamic downforce (`0.5 × coeff × ρ × vx²`), and weather-dependent grip/relaxation.
 
 - **`TireModel.java`** (136 lines) — Fiala/Brush tire model implementation. Computes:
-  - **Slip angles**: `α = atan2(vy_axle, vx) - steer` (with `MIN_SPEED` = 1.0 m/s clamp)
+  - **Slip angles**: `α = atan2(vy_axle, vx) - steer` where `vx` is longitudinal velocity in vehicle frame, `vy_axle` is lateral velocity at the axle position (with `MIN_SPEED` = 1.0 m/s clamp on `vx`)
   - **Lateral forces**: Fiala cubic polynomial below slide angle (`αSlide = atan(3·μ·Fz/Cs)`), then `μ·Fz·sign(α)` with progressive falloff past peak slip angle controlled by `slipAngleFalloff`
   - **Longitudinal forces**: Clamped to `μ·Fz`, with smooth braking direction (`vx / max(|vx|, 0.5)`) to prevent oscillation near zero
   - **Friction circle**: `√(Fx² + Fy²) ≤ μ·Fz` — proportional scaling when exceeded
-  - **Load sensitivity**: `μ_eff = μ_peak × (1 - loadSens × (Fz/Fz_nom - 1))`, clamped to min 0.01
-  - **Force relaxation**: `α = min(1, |speed| × dt / relaxLen)`, `force += (target - current) × α`
+  - **Load sensitivity**: `μ_eff = μ_peak · (1 - loadSens · (Fz/Fz_nom - 1))`, clamped to min 0.01
+  - **Force relaxation**: `blend = min(1, |speed| · dt / relaxLen)`, `force += (target - current) · blend`
   - Zero-allocation `FrictionCircleResult` reusable output object
 
 - **`SurfaceProperties.java`** (522 lines) — Surface friction model with:

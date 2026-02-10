@@ -251,7 +251,7 @@ Detailed description of how the four-wheel physics engine works under the hood.
 
 Each wheel independently computes tire forces using the Fiala/Brush tire model:
 
-- **Slip Angle**: The angle between where the tire is pointing and where it's actually going. Computed as: `α = atan2(vy_axle, vx) - steer`
+- **Slip Angle**: The angle between where the tire is pointing and where it's actually going. Computed as: `α = atan2(vy_axle, vx) - steer`, where `vx` is the vehicle's longitudinal velocity (forward/backward) and `vy_axle` is the lateral velocity at the axle position including yaw rate contribution
 - **Below saturation** (slip angle < slide angle): Lateral force follows a cubic polynomial — force builds progressively with slip angle
 - **Above saturation** (tire sliding): Force equals μ × Fz with progressive falloff past peak slip angle. The falloff rate is controlled by `slipAngleFalloff`
 - **Slide angle threshold**: `αSlide = atan(3 × μ × Fz / Cs)` — where Cs is the cornering stiffness
@@ -273,8 +273,8 @@ Tires produce less grip per unit of load as load increases:
 ### Force Relaxation
 
 Tire forces don't change instantly — there's a lag controlled by relaxation length:
-- **Formula**: `α = min(1, |speed| × dt / relaxationLength)`
-- `force = currentForce + (targetForce - currentForce) × α`
+- **Formula**: `blend = min(1, |speed| × dt / relaxationLength)`
+- `force = currentForce + (targetForce - currentForce) × blend`
 - Shorter relaxation length = faster response. Weather conditions multiply the relaxation length (rain ×1.3, heavy rain ×1.6, etc.)
 
 ### Weight Transfer
