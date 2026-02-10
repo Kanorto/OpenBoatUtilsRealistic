@@ -42,63 +42,89 @@ A comprehensive audit and fix of the physics system, addressing performance, thr
 #### Realistic Physics Engine (`physics/` package)
 A complete vehicle dynamics simulation with the following new source files:
 
-- **`RealisticPhysicsEngine.java`** (598 lines) — Bicycle-model physics engine. Computes longitudinal/lateral tire forces, weight transfer, steering dynamics, surface detection, and airborne physics. Uses Fiala/Brush tire model for realistic slip angle behavior.
+- **`RealisticPhysicsEngine.java`** (598 lines) — Bicycle-model physics engine. Computes longitudinal/lateral tire forces, weight transfer, steering dynamics, surface detection, and airborne physics. Uses Fiala/Brush tire model for realistic slip angle behavior. Retained for potential future use but not actively used (see v1.2 dead code removal).
 
 - **`FourWheelPhysicsEngine.java`** (653 lines) — Four-wheel (four-corner) physics engine that replaces the bicycle model. Each wheel (FL, FR, RL, RR) has independent:
   - Vertical load (weight transfer from acceleration/braking/cornering)
   - Slip angle and lateral force
   - Longitudinal force (drive/brake)
   - Friction circle constraint
-  Supports differential types, AWD torque split, aerodynamic downforce, and weather-dependent grip.
+
+  **Physics constants:**
+  - `GRAVITY` = 9.81 m/s², `TICK_TIME` = 0.05 s (20 TPS)
+  - `MIN_MU_PEAK` = 0.01 (minimum friction coefficient)
+  - `YAW_RATE_DAMPING` = 0.995 (per-substep yaw damping)
+  - `STOP_SPEED_THRESHOLD` = 0.15 m/s (below this speed → full stop)
+  - `LOW_SPEED_FADE_THRESHOLD` = 0.5 m/s (forces fade in between 0.15–0.5 m/s)
+  - `HANDBRAKE_FORCE_MULTIPLIER` = 0.5 (50% of braking force applied to rear wheels)
+  - `SELF_ALIGN_BASE_RATE` = 3.0, `SELF_ALIGN_SPEED_THRESHOLD` = 5.0 m/s (steering return-to-center rate)
+  - `LATERAL_VELOCITY_DAMPING` = 0.95 (per-tick lateral velocity damping)
+
+  **Airborne physics constants:**
+  - `AIR_DRAG_COEFFICIENT` = 0.35, `AIR_DENSITY` = 1.225 kg/m³, `FRONTAL_AREA` = 2.0 m²
+  - `AIR_YAW_RATE_DAMPING` = 0.998 (slow spin-down in air)
+
+  **Landing impact constants:**
+  - `LANDING_IMPACT_THRESHOLD` = -1.5 m/s vertical velocity
+  - `MAX_LANDING_GRIP_LOSS` = 0.6 (60% maximum grip reduction)
+  - `LANDING_GRIP_RECOVERY_RATE` = 0.08 per tick
+  - `MIN_AIRBORNE_TICKS_FOR_IMPACT` = 3 ticks minimum airborne time to trigger
+
+  **Visual output constants:**
+  - `VERTICAL_PITCH_FACTOR` = 0.15, `MAX_VERTICAL_PITCH` = 0.5 rad
+
+  Supports differential types (OPEN/LOCKED/LSD), AWD torque split, aerodynamic downforce (`0.5 × coeff × ρ × vx²`), and weather-dependent grip/relaxation.
 
 - **`TireModel.java`** (136 lines) — Fiala/Brush tire model implementation. Computes:
-  - Slip angles
-  - Lateral forces (linear region + saturation + progressive falloff)
-  - Longitudinal forces with friction circle constraint
-  - Load sensitivity (grip reduction under high load)
-  - Force relaxation (smooth tire response)
+  - **Slip angles**: `α = atan2(vy_axle, vx) - steer` (with `MIN_SPEED` = 1.0 m/s clamp)
+  - **Lateral forces**: Fiala cubic polynomial below slide angle (`αSlide = atan(3·μ·Fz/Cs)`), then `μ·Fz·sign(α)` with progressive falloff past peak slip angle controlled by `slipAngleFalloff`
+  - **Longitudinal forces**: Clamped to `μ·Fz`, with smooth braking direction (`vx / max(|vx|, 0.5)`) to prevent oscillation near zero
+  - **Friction circle**: `√(Fx² + Fy²) ≤ μ·Fz` — proportional scaling when exceeded
+  - **Load sensitivity**: `μ_eff = μ_peak × (1 - loadSens × (Fz/Fz_nom - 1))`, clamped to min 0.01
+  - **Force relaxation**: `α = min(1, |speed| × dt / relaxLen)`, `force += (target - current) × α`
+  - Zero-allocation `FrictionCircleResult` reusable output object
 
 - **`SurfaceProperties.java`** (522 lines) — Surface friction model with:
   - 18 surface presets: `ASPHALT_DRY`, `ASPHALT_WET`, `GRAVEL`, `DIRT`, `MUD`, `SNOW`, `ICE`, `BLUE_ICE`, `SAND`, `WOOD`, `CONCRETE`, `TERRACOTTA`, `METAL`, `GLASS`, `WOOL`, `BRICK`, `NETHER`, `VEGETATION`
-  - Automatic block → surface mapping for 300+ Minecraft blocks
-  - Per-surface parameters: peak friction (`muPeak`), sliding friction (`muSlide`), cornering stiffness, relaxation length, rolling resistance, peak slip angle, slip angle falloff, load sensitivity
-  - Server-configurable block surface type overrides
-  - Server-configurable default surface type
+  - Automatic block → surface mapping for 300+ Minecraft blocks (stone variants, colored concrete, terracotta, wood/logs, wool/carpets, metal/ore blocks, glass/panes, nether materials, vegetation, dirt/grass, mud/soul, snow, ice, sand, gravel, shulker boxes → WOOD, beds → WOOL)
+  - Per-surface parameters: peak friction (`muPeak`), sliding friction (`muSlide`), cornering stiffness (`Cs`), relaxation length, rolling resistance, peak slip angle (degrees), slip angle falloff rate, load sensitivity
+  - Server-configurable block surface type overrides via `setBlockSurfaceType(blockId, surfaceTypeName)`
+  - Server-configurable default surface type via `setDefaultSurfaceType(surfaceTypeName)`
+  - Default surface for unmapped blocks: `ASPHALT_DRY`
 
-- **`VehicleConfig.java`** (62 lines) — Vehicle configuration with all tunable parameters:
-  - Mass, wheelbase, CG height, track width, front weight bias
-  - Max steering angle, steering speed, speed-dependent steering reduction
-  - Engine force, braking force, brake bias, engine braking
-  - Drag coefficient, rolling resistance
-  - Drivetrain type, substep count
-  - AWD front/rear torque split
-  - Front/rear differential type, LSD locking coefficient
-  - Downforce coefficient and front/rear distribution
-  - Roll stiffness ratio
+- **`VehicleConfig.java`** (62 lines) — Vehicle configuration with all tunable parameters and defaults:
+  - `mass` = 1190 kg, `wheelbase` = 2.53 m, `cgHeight` = 0.45 m, `trackWidth` = 1.55 m
+  - `frontWeightBias` = 0.55, `maxSteeringAngle` = 0.50 rad, `steeringSpeed` = 5.0
+  - `brakingForce` = 8000 N, `engineForce` = 5500 N, `brakeBias` = 0.65, `engineBraking` = 800 N
+  - `dragCoefficient` = 0.35, `rollingResistance` = 0.015
+  - `substeps` = 4, `speedSteeringFactor` = 0.004
+  - `rollStiffnessRatioFront` = 0.55, `drivetrain` = AWD
+  - `awdFrontSplit` = 0.5, `frontDifferential` = OPEN, `rearDifferential` = OPEN
+  - `lsdLockingCoeff` = 0.3, `downforceCoefficient` = 0.5, `downforceFrontBias` = 0.4
 
-- **`VehicleType.java`** (60 lines) — 5 preset vehicle types:
-  - `WRC_CAR` — Modern WRC rally car (AWD, 1190kg, high power)
-  - `GROUP_B` — Group B rally car (RWD, 1100kg, very high power)
-  - `CLASSIC_RALLY` — Classic rally car (RWD, 1000kg, moderate power)
-  - `LIGHTWEIGHT` — Lightweight car (FWD, 800kg, nimble)
-  - `TRUCK` — Heavy truck (AWD, 2000kg, high torque)
+- **`VehicleType.java`** (60 lines) — 5 preset vehicle types with full configurations:
+  - `WRC_CAR` — AWD, 1190 kg, wheelbase 2.53 m, CG 0.45 m, track 1.55 m, 55% front weight, steering 0.50 rad @ 5.0 speed, engine 5500 N, brake 8000 N @ 65% front, drag 0.35, RR 0.015
+  - `GROUP_B` — RWD, 1100 kg, wheelbase 2.40 m, CG 0.50 m, track 1.50 m, 45% front weight, steering 0.48 rad @ 4.5 speed, engine 6000 N, brake 7500 N @ 60% front, drag 0.32, RR 0.014
+  - `CLASSIC_RALLY` — RWD, 1000 kg, wheelbase 2.45 m, CG 0.55 m, track 1.45 m, 50% front weight, steering 0.45 rad @ 4.0 speed, engine 4000 N, brake 6000 N @ 65% front, drag 0.38, RR 0.018
+  - `LIGHTWEIGHT` — FWD, 800 kg, wheelbase 2.30 m, CG 0.42 m, track 1.40 m, 60% front weight, steering 0.55 rad @ 6.0 speed, engine 3000 N, brake 5500 N @ 70% front, drag 0.30, RR 0.012
+  - `TRUCK` — AWD, 2000 kg, wheelbase 3.20 m, CG 0.90 m, track 1.80 m, 50% front weight, steering 0.35 rad @ 3.0 speed, engine 8000 N, brake 10000 N @ 60% front, drag 0.45, RR 0.025
 
 - **`DrivetrainType.java`** (29 lines) — Drivetrain enumeration:
-  - `RWD` — Rear-wheel drive
-  - `FWD` — Front-wheel drive
-  - `AWD` — All-wheel drive (configurable front/rear split)
+  - `RWD` — Rear-wheel drive (only rear axle powered)
+  - `FWD` — Front-wheel drive (only front axle powered)
+  - `AWD` — All-wheel drive (configurable front/rear split via `awdFrontSplit`)
 
 - **`DifferentialType.java`** (23 lines) — Differential types per axle:
-  - `OPEN` — Torque goes to wheel with least resistance
-  - `LOCKED` — Both wheels rotate at same speed
-  - `LSD` — Limited Slip Differential with configurable locking coefficient
+  - `OPEN` — Torque biased by wheel load (more loaded wheel gets more torque)
+  - `LOCKED` — Equal 50/50 torque split regardless of load
+  - `LSD` — Blends between open and locked via `lsdLockingCoeff` (0.0 = open, 1.0 = locked)
 
-- **`WeatherCondition.java`** (32 lines) — Weather grip modifiers:
-  - `CLEAR` — 100% grip
-  - `RAIN` — 70% grip, slower tire response
-  - `HEAVY_RAIN` — 50% grip, much slower tire response
-  - `SNOW` — 40% grip
-  - `FOG` — 95% grip (visual only, minimal physics effect)
+- **`WeatherCondition.java`** (32 lines) — Weather grip and tire response modifiers:
+  - `CLEAR` (id=0) — gripMultiplier=1.0, relaxationMultiplier=1.0
+  - `RAIN` (id=1) — gripMultiplier=0.70, relaxationMultiplier=1.3 (30% slower tire response)
+  - `HEAVY_RAIN` (id=2) — gripMultiplier=0.50, relaxationMultiplier=1.6 (60% slower tire response)
+  - `SNOW` (id=3) — gripMultiplier=0.40, relaxationMultiplier=1.5 (50% slower tire response)
+  - `FOG` (id=4) — gripMultiplier=0.95, relaxationMultiplier=1.1 (10% slower tire response)
 
 - **`WheelPosition.java`** (25 lines) — Wheel position enumeration (FL, FR, RL, RR).
 
@@ -193,13 +219,25 @@ Note: The following four-wheel model parameters have no singleplayer command and
 - **Shadow fields/methods**: All shadow declarations use Stonecutter conditions for the correct type per MC version
 - **All hook methods**: `oncePerTick()`, `paddleHook()`, `tickHook()`, `hookCheckLocation()`, and all `@Redirect`/`@ModifyConstant` methods have version-conditional signatures for both `BoatEntity` and `AbstractBoatEntity`
 - **`oncePerTick()`**: Added realistic physics engine integration:
-  - When `fourWheelPhysics.isEnabled()` and boat is on ground (or in air with airControl), computes full physics update each tick
-  - Reads player keyboard input (left/right for steering, forward for throttle, back for braking, jump for handbrake)
-  - Applies computed velocity and yaw delta to the boat entity
-  - Computes visual pitch (nose dips when braking, rises when accelerating) and roll contribution
-  - Jump key is repurposed as handbrake when realistic physics is active
-  - Original jump behavior is suppressed when realistic physics is enabled
+  - Activation: when `fourWheelPhysics.isEnabled()` and boat is on ground (`ON_LAND`), or in air with `airControl` enabled (`IN_AIR`)
+  - Sets `fourWheelPhysics.setAirborne(true)` when in air, `false` when on ground
+  - **Input reading**:
+    - Steering: `leftKey` → +1.0f, `rightKey` → -1.0f (or 0 if both/neither)
+    - Throttle: `pressingForward` → 1.0f
+    - Brake: `pressingBack` → 1.0f
+    - Handbrake: `jumpKey.isPressed()` AND NOT airborne (ground-only)
+  - **Physics update**: Calls `fourWheelPhysics.update(steeringInput, throttleInput, brakeInput, handbrake, yaw, surface)`
+  - **Velocity application**: Sets entity velocity from physics engine output (`getVx()`, `getVy()`, projected to world XZ plane via yaw rotation)
+  - **Yaw application**: Sets entity yaw from `getYawRate()` delta
+  - **Visual effects**:
+    - Pitch: `result.pitchAngle × -25.0f` (negative → nose dips on braking)
+    - Roll contribution: `result.rollAngle × 8.0f` (directional lean in corners)
+    - Combined: `MathHelper.clamp(visualPitch + rollContribution, -30.0f, 30.0f)` → `setPitch()`
+  - **Jump suppression**: When realistic physics is active, jump key is repurposed as handbrake; original jump behavior is suppressed
 - **`interpolationStepsHook()`**: Moved from the deleted `AbstractBoatMixin.java` into `BoatMixin.java` with `>=1.21.3` Stonecutter guard. Sets interpolation steps to 10 when `interpolationCompat` is enabled
+- **Collision resolution**: Movement is subdivided into `collisionResolution` (1–50) sub-movements, each with `velocity / collisionResolution`, for higher wall collision accuracy
+- **Water elevation**: When `waterElevation` is enabled and boat is `UNDER_WATER` or `UNDER_FLOWING_WATER`, Y position is incremented by 1.0 and Y velocity is zeroed
+- **Coyote time**: Timer resets to `coyoteTime` when on ground (or water with `waterJumping`). Decrements each tick. Jump requires `coyoteTimer >= 0`. After jumping, timer is set to -1 (no double jump)
 - **New import**: `FourWheelPhysicsEngine`
 
 #### `ClientboundPackets.java`
